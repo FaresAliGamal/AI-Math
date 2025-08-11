@@ -1,0 +1,75 @@
+name: Build Android APK (Capacitor)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create .env.local from secret
+        run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env.local
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Ensure Vite base is set
+        run: |
+          if ! grep -q "base:" vite.config.ts; then
+            tmpfile=$(mktemp)
+            awk 'BEGIN{patched=0}
+                 /defineConfig/ {print; next}
+                 /return\s*\{/ && patched==0 {
+                     print;
+                     print "      base: \x27./\x27,"; patched=1; next
+                 }
+                 {print}' vite.config.ts > "$tmpfile"
+            mv "$tmpfile" vite.config.ts
+          fi
+
+      - name: Install Capacitor
+        run: |
+          npm i -D @capacitor/cli
+          npm i @capacitor/core @capacitor/android
+
+      - name: Build web
+        run: npm run build || npx vite build
+
+      - name: Init Capacitor
+        run: npx cap init "Math MCQ Solver" "com.akastore.mathsolver" --web-dir=dist --npm-client=npm --skip-deps || true
+
+      - name: Add Android
+        run: npx cap add android || true
+
+      - name: Copy web assets
+        run: npx cap copy
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
