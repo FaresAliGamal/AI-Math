@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat } from "@google/genai";
-import { solveMcq, solveEssay } from './services/geminiService';
+import { solveMcq, solveEssay } from './services/geminiService.ts';
 import type { McqInput, McqOutput, EssayOutput } from './types';
 import { Loader } from './components/Loader';
 import { MathIcon, SparklesIcon, GlobeIcon, PaperclipIcon, XCircleIcon, PaperPlaneIcon, SunIcon, MoonIcon, TrashIcon, ExclamationTriangleIcon } from './components/Icons';
